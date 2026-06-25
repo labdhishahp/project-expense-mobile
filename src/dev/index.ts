@@ -1,0 +1,1 @@
+export { runDatabaseSmokeTest } from './databaseSmokeTest';

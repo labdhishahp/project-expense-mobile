@@ -1,2 +1,7 @@
-/** SQL table definitions will be added in a future milestone. */
-export const SCHEMA_VERSION = 0;
+export { SCHEMA_VERSION } from './version';
+export {
+  CREATE_CATEGORIES_TABLE,
+  CREATE_SCHEMA_MIGRATIONS_TABLE,
+  CREATE_TRANSACTION_INDEXES,
+  CREATE_TRANSACTIONS_TABLE,
+} from './tables';
