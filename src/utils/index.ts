@@ -1,5 +1,5 @@
 export { calculateBalance, calculateMonthlyBalance, sumByType } from './calculations';
-export { formatCurrency, parseCurrencyAmount } from './currency';
+export { formatCurrency, formatSignedCurrency, parseCurrencyAmount } from './currency';
 export {
   formatDisplayDate,
   getCurrentMonthKey,

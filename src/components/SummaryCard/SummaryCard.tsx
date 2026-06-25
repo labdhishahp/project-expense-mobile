@@ -1,15 +1,29 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '../../theme';
-import { PlaceholderBox } from '../PlaceholderBox';
+import { StatCard } from '../StatCard';
 
-export function SummaryCard() {
-  return <PlaceholderBox label="SummaryCard" style={styles.card} />;
+type SummaryCardProps = {
+  incomeThisMonth: number;
+  expenseThisMonth: number;
+};
+
+export function SummaryCard({ incomeThisMonth, expenseThisMonth }: SummaryCardProps) {
+  return (
+    <View style={styles.row}>
+      <StatCard label="Income This Month" amount={incomeThisMonth} variant="income" />
+      <View style={styles.gap} />
+      <StatCard label="Expense This Month" amount={expenseThisMonth} variant="expense" />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    minHeight: 96,
-    marginBottom: spacing.md,
+  row: {
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+  },
+  gap: {
+    width: spacing.sm,
   },
 });

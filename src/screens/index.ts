@@ -1,3 +1,4 @@
 export { HomeScreen } from './HomeScreen';
-export { TransactionsScreen } from './TransactionsScreen';
 export { SettingsScreen } from './SettingsScreen';
+export { TransactionDetailsScreen } from './TransactionDetailsScreen';
+export { TransactionsScreen } from './TransactionsScreen';
