@@ -1,15 +1,23 @@
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, LoadingState } from '../../components';
+import { Card, LoadingState, useToast } from '../../components';
 import { useCategories, useTransactions } from '../../hooks';
 import { TransactionType } from '../../models';
-import { spacing, typography, useTheme } from '../../theme';
+import { radius, spacing, typography, useTheme } from '../../theme';
 import type { RootStackParamList } from '../../types';
 import { formatDateTime, formatDisplayDate } from '../../utils/date';
 import { formatSignedCurrency } from '../../utils/currency';
@@ -25,9 +33,19 @@ export function TransactionDetailsScreen() {
   const route = useRoute<TransactionDetailsRouteProp>();
   const { transactionId } = route.params;
   const { colors } = useTheme();
+  const { showToast } = useToast();
 
-  const { transactions, loading } = useTransactions();
+  const { transactions, loading, deleteTransaction, refresh } = useTransactions();
   const { getById: getCategoryById } = useCategories();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const transaction = useMemo(
     () => transactions.find((item) => item.id === transactionId) ?? null,
@@ -40,6 +58,49 @@ export function TransactionDetailsScreen() {
     navigation.goBack();
   }, [navigation]);
 
+  const handleEdit = useCallback(() => {
+    setMenuVisible(false);
+    navigation.navigate('AddTransaction', { transactionId });
+  }, [navigation, transactionId]);
+
+  const handleDeleteConfirm = useCallback(() => {
+    setMenuVisible(false);
+
+    Alert.alert(
+      'Delete Transaction?',
+      'This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              if (deleting) {
+                return;
+              }
+
+              setDeleting(true);
+
+              try {
+                await deleteTransaction(transactionId);
+                showToast('Transaction Deleted');
+                navigation.goBack();
+              } catch {
+                Alert.alert(
+                  'Unable to Delete',
+                  'Something went wrong. Please try again.',
+                );
+              } finally {
+                setDeleting(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [deleteTransaction, deleting, navigation, showToast, transactionId]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -51,6 +112,9 @@ export function TransactionDetailsScreen() {
           padding: spacing.md,
         },
         backButton: {
+          paddingHorizontal: spacing.sm,
+        },
+        menuButton: {
           paddingHorizontal: spacing.sm,
         },
         amountCard: {
@@ -103,6 +167,38 @@ export function TransactionDetailsScreen() {
           ...typography.body,
           color: colors.textMuted,
         },
+        menuBackdrop: {
+          flex: 1,
+          backgroundColor: colors.overlay,
+          justifyContent: 'flex-start',
+          alignItems: 'flex-end',
+          paddingTop: spacing.xl,
+          paddingRight: spacing.md,
+        },
+        menuSheet: {
+          backgroundColor: colors.surface,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.border,
+          minWidth: 200,
+          overflow: 'hidden',
+        },
+        menuItem: {
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.md,
+        },
+        menuItemBorder: {
+          borderBottomWidth: 1,
+          borderBottomColor: colors.divider,
+        },
+        menuItemText: {
+          ...typography.body,
+          color: colors.text,
+          fontWeight: '500',
+        },
+        menuItemDestructive: {
+          color: colors.error,
+        },
       }),
     [colors],
   );
@@ -123,11 +219,23 @@ export function TransactionDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
       ),
+      headerRight: () =>
+        transaction ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Transaction options"
+            onPress={() => setMenuVisible(true)}
+            hitSlop={8}
+            style={styles.menuButton}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
+          </Pressable>
+        ) : null,
       headerStyle: { backgroundColor: colors.background },
       headerTitleStyle: { ...typography.sectionTitle, color: colors.text },
       headerShadowVisible: false,
     });
-  }, [colors, handleGoBack, navigation, styles.backButton]);
+  }, [colors, handleGoBack, navigation, styles.backButton, styles.menuButton, transaction]);
 
   if (loading && !transaction) {
     return (
@@ -149,6 +257,7 @@ export function TransactionDetailsScreen() {
 
   const isIncome = transaction.type === TransactionType.INCOME;
   const amountColor = isIncome ? colors.success : colors.error;
+  const wasEdited = transaction.updatedAt !== transaction.createdAt;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -185,13 +294,52 @@ export function TransactionDetailsScreen() {
             styles={styles}
           />
           <DetailRow
-            label="Created"
+            label="Created At"
             value={formatDateTime(transaction.createdAt)}
             styles={styles}
-            isLast
+            isLast={!wasEdited}
           />
+          {wasEdited ? (
+            <DetailRow
+              label="Updated At"
+              value={formatDateTime(transaction.updatedAt)}
+              styles={styles}
+              isLast
+            />
+          ) : null}
         </Card>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuSheet}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleEdit}
+              style={[styles.menuItem, styles.menuItemBorder]}
+            >
+              <Text style={styles.menuItemText}>Edit Transaction</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleDeleteConfirm}
+              style={styles.menuItem}
+            >
+              <Text style={[styles.menuItemText, styles.menuItemDestructive]}>
+                Delete Transaction
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -208,7 +356,12 @@ type DetailRowProps = {
   };
 };
 
-function DetailRow({ label, value, isLast = false, styles }: DetailRowProps) {
+function DetailRow({
+  label,
+  value,
+  isLast = false,
+  styles,
+}: DetailRowProps) {
   return (
     <View style={[styles.row, !isLast && styles.rowBorder]}>
       <Text style={styles.rowLabel}>{label}</Text>

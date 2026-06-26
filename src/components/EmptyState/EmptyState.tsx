@@ -5,11 +5,13 @@ import { radius, spacing, typography, useTheme } from '../../theme';
 
 type EmptyStateProps = {
   message?: string;
+  subtitle?: string;
   compact?: boolean;
 };
 
 export function EmptyState({
   message = 'No transactions yet',
+  subtitle,
   compact = false,
 }: EmptyStateProps) {
   const { colors } = useTheme();
@@ -32,14 +34,23 @@ export function EmptyState({
           color: colors.textMuted,
           textAlign: 'center',
           lineHeight: compact ? 20 : 22,
+          fontWeight: subtitle ? '600' : '400',
+        },
+        subtitle: {
+          ...typography.caption,
+          color: colors.textMuted,
+          textAlign: 'center',
+          marginTop: spacing.xs,
+          lineHeight: 20,
         },
       }),
-    [colors, compact],
+    [colors, compact, subtitle],
   );
 
   return (
     <View style={styles.container}>
       <Text style={styles.message}>{message}</Text>
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }

@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastProvider } from './components/Toast';
-import { runDatabaseSmokeTest } from './dev';
+import { ENABLE_DATABASE_SMOKE_TEST, runDatabaseSmokeTest } from './dev';
 import { initializeDatabase } from './database/sqlite';
 import { RootNavigator } from './navigation';
 import { ThemeProvider, useTheme } from './theme';
@@ -25,7 +25,7 @@ export default function App() {
     async function bootstrap() {
       await initializeDatabase();
 
-      if (__DEV__) {
+      if (__DEV__ && ENABLE_DATABASE_SMOKE_TEST) {
         await runDatabaseSmokeTest();
       }
     }

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { radius, spacing, typography, useTheme } from '../../theme';
 
@@ -7,6 +7,7 @@ type PrimaryButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
   emphasis?: boolean;
 };
 
@@ -14,6 +15,7 @@ export function PrimaryButton({
   label,
   onPress,
   disabled = false,
+  loading = false,
   emphasis = false,
 }: PrimaryButtonProps) {
   const { colors } = useTheme();
@@ -26,7 +28,13 @@ export function PrimaryButton({
           borderRadius: radius.md,
           paddingVertical: spacing.sm + 4,
           alignItems: 'center',
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled || loading ? 0.5 : 1,
+        },
+        content: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.sm,
         },
         label: {
           ...typography.body,
@@ -36,17 +44,24 @@ export function PrimaryButton({
           fontWeight: '700',
         },
       }),
-    [colors, disabled, emphasis],
+    [colors, disabled, emphasis, loading],
   );
+
+  const isDisabled = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
+      disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && !disabled && { opacity: 0.85 }]}
+      style={({ pressed }) => [styles.button, pressed && !isDisabled && { opacity: 0.85 }]}
     >
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.content}>
+        {loading ? (
+          <ActivityIndicator color={colors.textInverse} size="small" />
+        ) : null}
+        <Text style={styles.label}>{label}</Text>
+      </View>
     </Pressable>
   );
 }

@@ -5,6 +5,9 @@ import { getCurrentMonthKey, toISODateString } from '../utils/date';
 
 const LOG_PREFIX = '[DatabaseSmokeTest]';
 
+/** Set to `true` locally to run the CRUD smoke test on app startup (dev only). */
+export const ENABLE_DATABASE_SMOKE_TEST = false;
+
 export async function runDatabaseSmokeTest(): Promise<void> {
   if (!__DEV__) {
     return;

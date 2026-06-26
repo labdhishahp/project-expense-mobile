@@ -57,6 +57,10 @@ function describeArc(
   ].join(' ');
 }
 
+function formatLegendPercentage(percentage: number): string {
+  return `${Math.round(percentage)}%`;
+}
+
 export function CategorySpendingChart({ slices }: CategorySpendingChartProps) {
   const { colors } = useTheme();
 
@@ -77,18 +81,16 @@ export function CategorySpendingChart({ slices }: CategorySpendingChartProps) {
           textAlign: 'center',
           paddingVertical: spacing.lg,
         },
-        content: {
-          flexDirection: 'row',
+        chartWrapper: {
           alignItems: 'center',
+          marginBottom: spacing.md,
         },
         legend: {
-          flex: 1,
-          marginLeft: spacing.md,
+          gap: spacing.xs,
         },
         legendRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          marginBottom: spacing.xs,
         },
         swatch: {
           width: 10,
@@ -96,12 +98,12 @@ export function CategorySpendingChart({ slices }: CategorySpendingChartProps) {
           borderRadius: 5,
           marginRight: spacing.sm,
         },
-        legendLabel: {
+        legendName: {
           ...typography.caption,
           color: colors.text,
           flex: 1,
         },
-        legendAmount: {
+        legendValue: {
           ...typography.caption,
           color: colors.textSecondary,
           fontWeight: '600',
@@ -122,7 +124,7 @@ export function CategorySpendingChart({ slices }: CategorySpendingChartProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <View style={styles.chartWrapper}>
         <Svg width={CHART_SIZE} height={CHART_SIZE}>
           <G>
             {slices.map((slice) => {
@@ -151,18 +153,20 @@ export function CategorySpendingChart({ slices }: CategorySpendingChartProps) {
             />
           </G>
         </Svg>
+      </View>
 
-        <View style={styles.legend}>
-          {slices.map((slice) => (
-            <View key={slice.categoryId} style={styles.legendRow}>
-              <View style={[styles.swatch, { backgroundColor: slice.color }]} />
-              <Text style={styles.legendLabel} numberOfLines={1}>
-                {slice.name}
-              </Text>
-              <Text style={styles.legendAmount}>{formatCurrency(slice.amount)}</Text>
-            </View>
-          ))}
-        </View>
+      <View style={styles.legend}>
+        {slices.map((slice) => (
+          <View key={slice.categoryId} style={styles.legendRow}>
+            <View style={[styles.swatch, { backgroundColor: slice.color }]} />
+            <Text style={styles.legendName} numberOfLines={1}>
+              {slice.name}
+            </Text>
+            <Text style={styles.legendValue}>
+              {formatCurrency(slice.amount)} ({formatLegendPercentage(slice.percentage)})
+            </Text>
+          </View>
+        ))}
       </View>
     </View>
   );

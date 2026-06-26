@@ -1,6 +1,7 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useMemo, useState } from 'react';
+import type { RouteProp } from '@react-navigation/native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -30,6 +31,8 @@ import type { RootStackParamList } from '../../types';
 import { toISODateString } from '../../utils/date';
 import { parseCurrencyAmount } from '../../utils/currency';
 
+type AddTransactionRouteProp = RouteProp<RootStackParamList, 'AddTransaction'>;
+
 type FormErrors = {
   amount?: string;
   categoryId?: string;
@@ -38,10 +41,14 @@ type FormErrors = {
 export function AddTransactionScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<AddTransactionRouteProp>();
+  const transactionId = route.params?.transactionId;
+  const isEditing = Boolean(transactionId);
+
   const { colors } = useTheme();
   const { showToast } = useToast();
   const { categories, refresh: refreshCategories } = useCategories();
-  const { createTransaction } = useTransactions();
+  const { transactions, createTransaction, updateTransaction } = useTransactions();
 
   const [transactionType, setTransactionType] = useState<TransactionType>(
     TransactionType.EXPENSE,
@@ -52,12 +59,32 @@ export function AddTransactionScreen() {
   const [date, setDate] = useState(toISODateString(new Date()));
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+  const savingRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
       void refreshCategories();
     }, [refreshCategories]),
   );
+
+  useEffect(() => {
+    if (!isEditing || !transactionId || prefilled) {
+      return;
+    }
+
+    const transaction = transactions.find((item) => item.id === transactionId);
+    if (!transaction) {
+      return;
+    }
+
+    setTransactionType(transaction.type);
+    setAmount(String(transaction.amount));
+    setCategoryId(transaction.categoryId);
+    setDescription(transaction.description);
+    setDate(transaction.date);
+    setPrefilled(true);
+  }, [isEditing, prefilled, transactionId, transactions]);
 
   const isIncome = transactionType === TransactionType.INCOME;
 
@@ -68,8 +95,17 @@ export function AddTransactionScreen() {
         : isExpenseDefaultCategoryName(category.name),
     );
 
-    return isIncome ? filtered : sortExpenseCategories(filtered);
-  }, [categories, isIncome]);
+    const sorted = isIncome ? filtered : sortExpenseCategories(filtered);
+
+    if (categoryId && !sorted.some((category) => category.id === categoryId)) {
+      const currentCategory = categories.find((category) => category.id === categoryId);
+      if (currentCategory) {
+        return [...sorted, currentCategory];
+      }
+    }
+
+    return sorted;
+  }, [categories, categoryId, isIncome]);
 
   const styles = useMemo(
     () =>
@@ -139,6 +175,10 @@ export function AddTransactionScreen() {
   }, [amount, categoryId]);
 
   const handleSwitchType = useCallback(() => {
+    if (isEditing) {
+      return;
+    }
+
     setTransactionType((current) =>
       current === TransactionType.EXPENSE
         ? TransactionType.INCOME
@@ -146,9 +186,13 @@ export function AddTransactionScreen() {
     );
     setCategoryId(null);
     setErrors({});
-  }, []);
+  }, [isEditing]);
 
   const handleSave = useCallback(async () => {
+    if (savingRef.current) {
+      return;
+    }
+
     const nextErrors = validate();
     setErrors(nextErrors);
 
@@ -158,24 +202,40 @@ export function AddTransactionScreen() {
 
     const parsedAmount = parseCurrencyAmount(amount);
 
+    savingRef.current = true;
     setSaving(true);
 
     try {
-      await createTransaction({
-        type: transactionType,
-        amount: parsedAmount,
-        categoryId,
-        description: description.trim(),
-        date: date.trim(),
-      });
+      if (isEditing && transactionId) {
+        await updateTransaction({
+          id: transactionId,
+          type: transactionType,
+          amount: parsedAmount,
+          categoryId,
+          description: description.trim(),
+          date: date.trim(),
+        });
+        showToast('Transaction Updated');
+      } else {
+        await createTransaction({
+          type: transactionType,
+          amount: parsedAmount,
+          categoryId,
+          description: description.trim(),
+          date: date.trim(),
+        });
+        showToast(isIncome ? 'Income Added' : 'Expense Added');
+      }
 
-      showToast(isIncome ? 'Income Added' : 'Expense Added');
       navigation.goBack();
     } catch {
       setErrors({
-        amount: 'Unable to save transaction. Please try again.',
+        amount: isEditing
+          ? 'Unable to update transaction. Please try again.'
+          : 'Unable to save transaction. Please try again.',
       });
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [
@@ -184,10 +244,13 @@ export function AddTransactionScreen() {
     createTransaction,
     date,
     description,
+    isEditing,
     isIncome,
     navigation,
     showToast,
+    transactionId,
     transactionType,
+    updateTransaction,
     validate,
   ]);
 
@@ -201,6 +264,20 @@ export function AddTransactionScreen() {
     [errors.categoryId],
   );
 
+  const screenTitle = isEditing
+    ? isIncome
+      ? 'Edit Income'
+      : 'Edit Expense'
+    : isIncome
+      ? 'Add Income'
+      : 'Add Expense';
+
+  const saveLabel = isEditing
+    ? 'Update Transaction'
+    : isIncome
+      ? 'Add Income'
+      : 'Add Expense';
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -208,18 +285,18 @@ export function AddTransactionScreen() {
         style={styles.container}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>
-            {isIncome ? 'Add Income' : 'Add Expense'}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={handleSwitchType}
-          >
-            <Text style={styles.switchType}>
-              {isIncome ? 'Switch to Expense' : 'Switch to Income'}
-            </Text>
-          </Pressable>
+          <Text style={styles.title}>{screenTitle}</Text>
+          {!isEditing ? (
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={handleSwitchType}
+            >
+              <Text style={styles.switchType}>
+                {isIncome ? 'Switch to Expense' : 'Switch to Income'}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <ScrollView
@@ -269,9 +346,10 @@ export function AddTransactionScreen() {
           />
 
           <PrimaryButton
-            label={isIncome ? 'Add Income' : 'Add Expense'}
+            label={saveLabel}
             onPress={() => void handleSave()}
             disabled={saving}
+            loading={saving}
             emphasis
           />
         </ScrollView>

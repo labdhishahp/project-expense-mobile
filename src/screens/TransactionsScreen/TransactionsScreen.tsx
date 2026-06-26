@@ -106,7 +106,10 @@ export function TransactionsScreen() {
         {error ? <ErrorState message={error} /> : null}
 
         {transactions.length === 0 ? (
-          <EmptyState message="No transactions yet." />
+          <EmptyState
+            message="No transactions yet."
+            subtitle="Start by adding your first expense."
+          />
         ) : (
           <GroupedTransactionList
             groups={groupedTransactions}

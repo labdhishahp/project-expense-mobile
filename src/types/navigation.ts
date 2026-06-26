@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 export type RootStackParamList = {
   MainTabs: undefined;
   TransactionDetails: { transactionId: string };
-  AddTransaction: undefined;
+  AddTransaction: { transactionId?: string } | undefined;
   ManageCategories: undefined;
 };
 

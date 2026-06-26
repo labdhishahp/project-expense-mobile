@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, PrimaryButton, TextField } from '../../components';
+import { Card, EmptyState, PrimaryButton, TextField } from '../../components';
 import { useCategories } from '../../hooks';
 import type { Category } from '../../models';
 import { radius, spacing, typography, useTheme } from '../../theme';
@@ -42,6 +42,16 @@ export function ManageCategoriesScreen() {
   const [form, setForm] = useState<CategoryFormState>(DEFAULT_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const defaultCategories = useMemo(
+    () => categories.filter((category) => category.isDefault),
+    [categories],
+  );
+
+  const customCategories = useMemo(
+    () => categories.filter((category) => !category.isDefault),
+    [categories],
+  );
 
   const styles = useMemo(
     () =>
@@ -137,6 +147,35 @@ export function ManageCategoriesScreen() {
     setModalVisible(true);
   }, []);
 
+  const renderCategoryRow = useCallback(
+    (category: Category, index: number, total: number) => (
+      <Pressable
+        key={category.id}
+        accessibilityRole="button"
+        onPress={() => openEditModal(category)}
+        style={[
+          styles.categoryRow,
+          index === total - 1 && { borderBottomWidth: 0 },
+        ]}
+      >
+        <View
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: category.color,
+            marginRight: spacing.sm,
+          }}
+        />
+        <Text style={styles.categoryName}>{category.name}</Text>
+        <View style={styles.actions}>
+          <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+        </View>
+      </Pressable>
+    ),
+    [colors.textMuted, openEditModal, styles.actions, styles.categoryName, styles.categoryRow],
+  );
+
   const closeModal = useCallback(() => {
     setModalVisible(false);
     setEditingCategory(null);
@@ -228,33 +267,26 @@ export function ManageCategoriesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={{ padding: 0, overflow: 'hidden' }}>
-          {categories.map((category, index) => (
-            <Pressable
-              key={category.id}
-              accessibilityRole="button"
-              onPress={() => openEditModal(category)}
-              style={[
-                styles.categoryRow,
-                index === categories.length - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: category.color,
-                  marginRight: spacing.sm,
-                }}
-              />
-              <Text style={styles.categoryName}>{category.name}</Text>
-              <View style={styles.actions}>
-                <Ionicons name="create-outline" size={18} color={colors.textMuted} />
-              </View>
-            </Pressable>
-          ))}
-        </Card>
+        {defaultCategories.length > 0 ? (
+          <Card style={{ padding: 0, overflow: 'hidden', marginBottom: spacing.md }}>
+            {defaultCategories.map((category, index) =>
+              renderCategoryRow(category, index, defaultCategories.length),
+            )}
+          </Card>
+        ) : null}
+
+        {customCategories.length === 0 ? (
+          <EmptyState
+            message="No custom categories."
+            subtitle="Tap + to create one."
+          />
+        ) : (
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            {customCategories.map((category, index) =>
+              renderCategoryRow(category, index, customCategories.length),
+            )}
+          </Card>
+        )}
       </ScrollView>
 
       <Modal
@@ -296,6 +328,7 @@ export function ManageCategoriesScreen() {
               label={editingCategory ? 'Save Changes' : 'Add Category'}
               onPress={() => void handleSaveCategory()}
               disabled={saving}
+              loading={saving}
             />
 
             {editingCategory && !editingCategory.isDefault ? (

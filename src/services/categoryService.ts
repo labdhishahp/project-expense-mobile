@@ -5,7 +5,7 @@ import {
   type UpdateCategoryInput,
 } from '../models';
 import { ValidationError } from '../database/errors';
-import { categoryRepository } from '../repositories';
+import { categoryRepository, transactionRepository } from '../repositories';
 import {
   assertHexColor,
   assertNonEmptyString,
@@ -74,6 +74,13 @@ export const categoryService = {
 
     if (existing.isDefault) {
       throw new ValidationError('Default categories cannot be deleted.');
+    }
+
+    const linkedTransactions = await transactionRepository.getByCategory(id);
+    if (linkedTransactions.length > 0) {
+      throw new ValidationError(
+        'This category is already used in transactions and cannot be deleted.',
+      );
     }
 
     await categoryRepository.delete(id);

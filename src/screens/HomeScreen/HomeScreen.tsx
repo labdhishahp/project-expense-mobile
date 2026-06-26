@@ -5,6 +5,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,7 @@ import {
 import { getFabBottomOffset } from '../../constants';
 import { useCategories, useSummary, useTransactions } from '../../hooks';
 import type { Transaction } from '../../models';
-import { spacing, useTheme } from '../../theme';
+import { spacing, typography, useTheme } from '../../theme';
 import type { RootStackParamList } from '../../types';
 import { buildCategorySpendingSlices } from '../../utils/categorySpending';
 import { getTodayISODate } from '../../utils/date';
@@ -78,10 +79,17 @@ export function HomeScreen() {
 
   const today = getTodayISODate();
 
-  const todayTransactions = useMemo(
+  const todayTransactionsAll = useMemo(
     () => transactions.filter((transaction) => transaction.date === today),
     [today, transactions],
   );
+
+  const todayTransactions = useMemo(
+    () => todayTransactionsAll.slice(0, 5),
+    [todayTransactionsAll],
+  );
+
+  const showTodayLimitHint = todayTransactionsAll.length > 5;
 
   const spendingSlices = useMemo(
     () => buildCategorySpendingSlices(transactions, getCategoryById),
@@ -102,8 +110,15 @@ export function HomeScreen() {
           paddingHorizontal: spacing.md,
           paddingTop: spacing.lg,
         },
+        limitHint: {
+          ...typography.caption,
+          color: colors.textMuted,
+          textAlign: 'center',
+          marginTop: spacing.xs,
+          marginBottom: spacing.sm,
+        },
       }),
-    [colors.background],
+    [colors.background, colors.textMuted],
   );
 
   if (loading && !summary) {
@@ -143,6 +158,12 @@ export function HomeScreen() {
           emptyMessage={'No transactions today.\nTap + to add your first expense.'}
           compactEmpty
         />
+
+        {showTodayLimitHint ? (
+          <Text style={styles.limitHint}>
+            Showing latest 5 transactions today.
+          </Text>
+        ) : null}
 
         <SectionHeader title="Category Spending" />
 
