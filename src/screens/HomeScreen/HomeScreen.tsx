@@ -1,42 +1,48 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   RefreshControl,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   BalanceCard,
+  CategorySpendingChart,
   ErrorState,
   FloatingActionButton,
+  HomeHeader,
   LoadingState,
   SectionHeader,
   SummaryCard,
   TransactionList,
 } from '../../components';
+import { getFabBottomOffset } from '../../constants';
 import { useCategories, useSummary, useTransactions } from '../../hooks';
 import type { Transaction } from '../../models';
-import { colors, spacing } from '../../theme';
+import { spacing, useTheme } from '../../theme';
 import type { RootStackParamList } from '../../types';
-
-const RECENT_TRANSACTION_LIMIT = 5;
+import { buildCategorySpendingSlices } from '../../utils/categorySpending';
+import { getTodayISODate } from '../../utils/date';
 
 export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
+  const { colors, mode, toggleTheme } = useTheme();
 
   const {
     summary,
     loading: summaryLoading,
     error: summaryError,
     refresh: refreshSummary,
-  } = useSummary(RECENT_TRANSACTION_LIMIT);
+  } = useSummary(50);
 
   const {
+    transactions,
     loading: transactionsLoading,
     error: transactionsError,
     refresh: refreshTransactions,
@@ -66,7 +72,39 @@ export function HomeScreen() {
     [navigation],
   );
 
-  const recentTransactions = summary?.recentTransactions ?? [];
+  const handleAddPress = useCallback(() => {
+    navigation.navigate('AddTransaction');
+  }, [navigation]);
+
+  const today = getTodayISODate();
+
+  const todayTransactions = useMemo(
+    () => transactions.filter((transaction) => transaction.date === today),
+    [today, transactions],
+  );
+
+  const spendingSlices = useMemo(
+    () => buildCategorySpendingSlices(transactions, getCategoryById),
+    [getCategoryById, transactions],
+  );
+
+  const themeIcon = mode === 'light' ? '🌙' : '☀️';
+  const bottomPadding = getFabBottomOffset(insets.bottom) + 72;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        scrollContent: {
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.lg,
+        },
+      }),
+    [colors.background],
+  );
 
   if (loading && !summary) {
     return (
@@ -79,13 +117,15 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={() => void refresh()} />
         }
         showsVerticalScrollIndicator={false}
       >
         {error ? <ErrorState message={error} /> : null}
+
+        <HomeHeader onToggleTheme={toggleTheme} themeIcon={themeIcon} />
 
         <BalanceCard balance={summary?.currentBalance ?? 0} />
 
@@ -94,33 +134,22 @@ export function HomeScreen() {
           expenseThisMonth={summary?.expenseThisMonth ?? 0}
         />
 
-        <SectionHeader title="Recent Transactions" />
+        <SectionHeader title="Today's Transactions" />
 
         <TransactionList
-          transactions={recentTransactions}
+          transactions={todayTransactions}
           getCategoryById={getCategoryById}
           onTransactionPress={handleTransactionPress}
+          emptyMessage={'No transactions today.\nTap + to add your first expense.'}
+          compactEmpty
         />
 
-        <View style={styles.fabSpacer} />
+        <SectionHeader title="Category Spending" />
+
+        <CategorySpendingChart slices={spendingSlices} />
       </ScrollView>
 
-      <FloatingActionButton />
+      <FloatingActionButton onPress={handleAddPress} />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  fabSpacer: {
-    height: 80,
-  },
-});

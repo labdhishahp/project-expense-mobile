@@ -8,15 +8,19 @@ type TransactionListProps = {
   transactions: Transaction[];
   getCategoryById: (id: string) => Category | null;
   onTransactionPress: (transaction: Transaction) => void;
+  emptyMessage?: string;
+  compactEmpty?: boolean;
 };
 
 export function TransactionList({
   transactions,
   getCategoryById,
   onTransactionPress,
+  emptyMessage,
+  compactEmpty = false,
 }: TransactionListProps) {
   if (transactions.length === 0) {
-    return <EmptyState />;
+    return <EmptyState message={emptyMessage} compact={compactEmpty} />;
   }
 
   return (

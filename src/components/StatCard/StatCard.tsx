@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { colors, typography } from '../../theme';
+import { typography, useTheme } from '../../theme';
 import { formatCurrency } from '../../utils/currency';
 import { Card } from '../Card';
 
@@ -11,7 +12,27 @@ type StatCardProps = {
 };
 
 export function StatCard({ label, amount, variant }: StatCardProps) {
+  const { colors } = useTheme();
   const amountColor = variant === 'income' ? colors.success : colors.error;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          flex: 1,
+        },
+        label: {
+          ...typography.caption,
+          color: colors.textSecondary,
+          marginBottom: 4,
+        },
+        amount: {
+          ...typography.sectionTitle,
+          fontWeight: '700',
+        },
+      }),
+    [colors],
+  );
 
   return (
     <Card style={styles.card}>
@@ -22,18 +43,3 @@ export function StatCard({ label, amount, variant }: StatCardProps) {
     </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-  },
-  label: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  amount: {
-    ...typography.sectionTitle,
-    fontWeight: '700',
-  },
-});

@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { getFabBottomOffset } from '../../constants';
+import { radius, shadows, spacing, typography, useTheme } from '../../theme';
 
 type FloatingActionButtonProps = {
   onPress?: () => void;
@@ -9,17 +10,28 @@ type FloatingActionButtonProps = {
 
 export function FloatingActionButton({ onPress }: FloatingActionButtonProps) {
   const insets = useSafeAreaInsets();
-  const bottomOffset = spacing.lg + insets.bottom;
+  const { colors } = useTheme();
+  const bottomOffset = getFabBottomOffset(insets.bottom);
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrapper, { bottom: bottomOffset }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrapper, { bottom: bottomOffset }]}
+    >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Add transaction"
+        accessibilityLabel="Add expense"
         onPress={onPress}
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          {
+            backgroundColor: colors.primary,
+            ...shadows.lg,
+          },
+          pressed && styles.pressed,
+        ]}
       >
-        <Text style={styles.label}>+</Text>
+        <Text style={[styles.label, { color: colors.textInverse }]}>+</Text>
       </Pressable>
     </View>
   );
@@ -36,17 +48,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.lg,
   },
   pressed: {
     opacity: 0.85,
   },
   label: {
     ...typography.sectionTitle,
-    color: colors.textInverse,
     lineHeight: 28,
   },
 });

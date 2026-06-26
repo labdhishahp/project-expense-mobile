@@ -11,3 +11,5 @@ export { radius, type RadiusName } from './radius';
 export { shadows, type ShadowName } from './shadows';
 export { spacing, type SpacingName } from './spacing';
 export { typography } from './typography';
+export { ThemeProvider } from './ThemeProvider';
+export { useTheme } from './useTheme';

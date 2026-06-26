@@ -82,7 +82,7 @@ export const themes = {
 } as const;
 
 export type ThemeMode = keyof typeof themes;
-export type ThemeColors = typeof lightColors;
+export type ThemeColors = (typeof themes)[ThemeMode];
 export type ColorName = keyof ThemeColors;
 
 /** Active palette. Swap to `themes.dark` when dark mode is implemented. */

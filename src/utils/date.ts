@@ -27,6 +27,29 @@ export function formatDisplayDate(value: string): string {
   });
 }
 
+export function formatShortDate(value: string): string {
+  const date = parseISODate(value);
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+export function formatDateTime(value: string): string {
+  const date = new Date(value);
+  return date.toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function getTodayISODate(): string {
+  return toISODateString(new Date());
+}
+
 export function getMonthKey(date: Date = new Date()): MonthKey {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

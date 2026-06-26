@@ -22,8 +22,8 @@ export async function runDatabaseSmokeTest(): Promise<void> {
     throw new Error('No categories available for smoke test.');
   }
 
-  const salaryCategory =
-    categories.find((category) => category.name === 'Salary') ?? categories[0];
+  const incomeCategory =
+    categories.find((category) => category.name === 'Income') ?? categories[0];
 
   const today = toISODateString(new Date());
 
@@ -38,7 +38,7 @@ export async function runDatabaseSmokeTest(): Promise<void> {
   const income = await transactionService.create({
     type: TransactionType.INCOME,
     amount: 50000,
-    categoryId: salaryCategory.id,
+    categoryId: incomeCategory.id,
     description: 'Dev test salary',
     date: today,
   });

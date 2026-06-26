@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View, type ViewProps } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, spacing, typography } from '../../theme';
+import { getTabBarBottomInset } from '../../constants';
+import { spacing, typography, useTheme } from '../../theme';
 
 type ScreenContainerProps = ViewProps & {
   title: string;
@@ -15,6 +17,39 @@ export function ScreenContainer({
   children,
   ...props
 }: ScreenContainerProps) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        header: {
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.lg,
+          marginBottom: spacing.md,
+        },
+        content: {
+          flex: 1,
+          paddingHorizontal: spacing.md,
+          paddingBottom: getTabBarBottomInset(insets.bottom) + spacing.md,
+        },
+        title: {
+          ...typography.screenTitle,
+          color: colors.text,
+        },
+        subtitle: {
+          ...typography.body,
+          color: colors.textSecondary,
+          marginTop: spacing.xs,
+        },
+      }),
+    [colors, insets.bottom],
+  );
+
   return (
     <SafeAreaView style={[styles.container, style]} edges={['top']} {...props}>
       <View style={styles.header}>
@@ -25,28 +60,3 @@ export function ScreenContainer({
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  title: {
-    ...typography.screenTitle,
-    color: colors.text,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-});

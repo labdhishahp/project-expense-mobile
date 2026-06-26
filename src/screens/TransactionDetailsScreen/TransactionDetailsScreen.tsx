@@ -9,9 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, LoadingState } from '../../components';
 import { useCategories, useTransactions } from '../../hooks';
 import { TransactionType } from '../../models';
-import { colors, radius, spacing, typography } from '../../theme';
+import { spacing, typography, useTheme } from '../../theme';
 import type { RootStackParamList } from '../../types';
-import { formatDisplayDate } from '../../utils/date';
+import { formatDateTime, formatDisplayDate } from '../../utils/date';
 import { formatSignedCurrency } from '../../utils/currency';
 
 type TransactionDetailsRouteProp = RouteProp<
@@ -24,6 +24,7 @@ export function TransactionDetailsScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<TransactionDetailsRouteProp>();
   const { transactionId } = route.params;
+  const { colors } = useTheme();
 
   const { transactions, loading } = useTransactions();
   const { getById: getCategoryById } = useCategories();
@@ -38,6 +39,73 @@ export function TransactionDetailsScreen() {
   const handleGoBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        content: {
+          padding: spacing.md,
+        },
+        backButton: {
+          paddingHorizontal: spacing.sm,
+        },
+        amountCard: {
+          alignItems: 'center',
+          marginBottom: spacing.md,
+          paddingVertical: spacing.lg,
+        },
+        amountLabel: {
+          ...typography.caption,
+          color: colors.textSecondary,
+          textTransform: 'uppercase',
+          letterSpacing: 0.8,
+          fontWeight: '600',
+          marginBottom: spacing.xs,
+        },
+        amount: {
+          fontSize: 36,
+          fontWeight: '700',
+          lineHeight: 44,
+        },
+        detailCard: {
+          padding: 0,
+          overflow: 'hidden',
+        },
+        row: {
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.md,
+        },
+        rowBorder: {
+          borderBottomWidth: 1,
+          borderBottomColor: colors.divider,
+        },
+        rowLabel: {
+          ...typography.caption,
+          color: colors.textSecondary,
+          marginBottom: 4,
+        },
+        rowValue: {
+          ...typography.body,
+          color: colors.text,
+          fontWeight: '500',
+        },
+        notFound: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: spacing.lg,
+        },
+        notFoundText: {
+          ...typography.body,
+          color: colors.textMuted,
+        },
+      }),
+    [colors],
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -59,7 +127,7 @@ export function TransactionDetailsScreen() {
       headerTitleStyle: { ...typography.sectionTitle, color: colors.text },
       headerShadowVisible: false,
     });
-  }, [navigation, handleGoBack]);
+  }, [colors, handleGoBack, navigation, styles.backButton]);
 
   if (loading && !transaction) {
     return (
@@ -89,20 +157,37 @@ export function TransactionDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.amountCard}>
-          <Text style={styles.amountLabel}>
-            {isIncome ? 'Income' : 'Expense'}
-          </Text>
+          <Text style={styles.amountLabel}>Amount</Text>
           <Text style={[styles.amount, { color: amountColor }]}>
             {formatSignedCurrency(transaction.amount, transaction.type)}
           </Text>
         </Card>
 
         <Card style={styles.detailCard}>
-          <DetailRow label="Category" value={category?.name ?? 'Unknown'} />
-          <DetailRow label="Date" value={formatDisplayDate(transaction.date)} />
+          <DetailRow
+            label="Category"
+            value={category?.name ?? 'Unknown'}
+            styles={styles}
+          />
+          <DetailRow
+            label="Date"
+            value={formatDisplayDate(transaction.date)}
+            styles={styles}
+          />
           <DetailRow
             label="Description"
             value={transaction.description || '—'}
+            styles={styles}
+          />
+          <DetailRow
+            label="Transaction Type"
+            value={isIncome ? 'Income' : 'Expense'}
+            styles={styles}
+          />
+          <DetailRow
+            label="Created"
+            value={formatDateTime(transaction.createdAt)}
+            styles={styles}
             isLast
           />
         </Card>
@@ -115,9 +200,15 @@ type DetailRowProps = {
   label: string;
   value: string;
   isLast?: boolean;
+  styles: {
+    row: object;
+    rowBorder: object;
+    rowLabel: object;
+    rowValue: object;
+  };
 };
 
-function DetailRow({ label, value, isLast = false }: DetailRowProps) {
+function DetailRow({ label, value, isLast = false, styles }: DetailRowProps) {
   return (
     <View style={[styles.row, !isLast && styles.rowBorder]}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -125,66 +216,3 @@ function DetailRow({ label, value, isLast = false }: DetailRowProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.md,
-  },
-  backButton: {
-    paddingHorizontal: spacing.sm,
-  },
-  amountCard: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  amountLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  amount: {
-    fontSize: 36,
-    fontWeight: '700',
-    lineHeight: 44,
-  },
-  detailCard: {
-    padding: 0,
-    overflow: 'hidden',
-  },
-  row: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  rowLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  rowValue: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  notFoundText: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-});
